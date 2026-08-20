@@ -88,6 +88,10 @@ ok('按最后活动倒序', list[0].lastActivityMs >= list[1].lastActivityMs);
 ok('清单会话 ID 从文件名提取', list.every((s) => s.path.endsWith(s.sessionId + '.jsonl')));
 assertClose('清单合计与 total 一致', list.reduce((a, s) => a + s.yuanToday, 0), daily.total);
 
+console.log('== 会话列表自动标题（第一条真人消息）==');
+ok('自动标题提取到 s2 的消息', list.some((s) => s.sessionId === 's2' && s.autoTitle === '刚才在 s2 里发的话'));
+ok('无用户消息的 s1 自动标题为 null', list.some((s) => s.sessionId === 's1' && s.autoTitle === null));
+
 console.log('== "当前对话"定位（最后用户消息最新者）==');
 const currentPath = daily.currentConversationPath();
 ok('定位到 s2（其用户消息最新）', currentPath === path.join(projA, 's2.jsonl'), 'got ' + currentPath);

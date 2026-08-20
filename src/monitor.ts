@@ -230,7 +230,8 @@ export class Monitor {
       todayYuan: this.daily.total,
       sessions: this.daily.listToday().map((s) => ({
         ...s,
-        title: this.titleStore?.get(s.sessionId) ?? s.sessionId.slice(0, 8),
+        // 标题优先级：用户自定义 > 自动提取（第一条真人消息）> 会话 ID 短码
+        title: this.titleStore?.get(s.sessionId) ?? s.autoTitle ?? s.sessionId.slice(0, 8),
       })),
       pinnedPath: this.jsonl.pinnedPath,
       balance: this.balanceChecker?.result ?? null,

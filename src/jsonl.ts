@@ -3,6 +3,7 @@ import * as path from 'path';
 import { BridgeData } from './types';
 import { homeDir } from './homedir';
 import { cacheHitRate, costYuan, loadPricing, lookupPrice } from './pricing';
+import { extractUserText } from './usertext';
 
 interface MsgUsage {
   input: number;
@@ -200,7 +201,7 @@ export class JsonlFallback {
         }
         // 标题：第一条"真人"用户消息（跳过系统通知/XML 内容）
         if (!this.sessionTitle && rec?.type === 'user' && rec.message?.content != null) {
-          const text = this.extractUserText(rec.message.content);
+          const text = extractUserText(rec.message.content);
           if (text) this.sessionTitle = text.slice(0, 60);
         }
         if (rec?.type !== 'assistant' || !rec.message?.usage) continue;
@@ -226,32 +227,6 @@ export class JsonlFallback {
     } catch {
       /* 读取失败 → 保持上次数据 */
     }
-  }
-
-  /** 从用户消息 content 提取纯文本（string 或 [{type:'text',text}] 数组；跳过系统 XML/Caveat） */
-  private extractUserText(content: unknown): string | null {
-    if (typeof content === 'string') {
-      const t = content.trim();
-      if (!t || t.startsWith('<') || t.startsWith('Caveat:')) return null;
-      return t;
-    }
-    if (Array.isArray(content)) {
-      const parts: string[] = [];
-      for (const block of content) {
-        if (
-          block &&
-          typeof block === 'object' &&
-          (block as { type?: string }).type === 'text' &&
-          typeof (block as { text?: string }).text === 'string'
-        ) {
-          parts.push((block as { text: string }).text.trim());
-        }
-      }
-      const t = parts.join(' ').trim();
-      if (!t || t.startsWith('<') || t.startsWith('Caveat:')) return null;
-      return t;
-    }
-    return null;
   }
 
   private emit(): void {

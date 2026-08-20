@@ -151,24 +151,25 @@
       $('n-balance').textContent = '未启用（点击右上角「余额监测」按钮开启）';
     }
 
-    // 今日会话列表（点击钉选切换监控）
+    // 今日会话列表（点击钉选切换监控；每行 ✎ 可就地改名）
     const listEl = $('session-list');
     const sess = state.sessions || [];
-    if (sess.length) {
+    if (sess.length && !editingRowPath) {
       listEl.innerHTML = sess
         .map((s) => {
           const pinned = state.pinnedPath === s.path;
           const active = d.transcriptPath === s.path;
           const t = new Date(s.lastActivityMs).toLocaleTimeString('zh-CN');
           return (
-            '<div class="s-row' + (pinned ? ' pinned' : '') + (active ? ' active' : '') + '" data-path="' + escapeHtml(s.path) + '">' +
+            '<div class="s-row' + (pinned ? ' pinned' : '') + (active ? ' active' : '') + '" data-path="' + escapeHtml(s.path) + '" data-sid="' + escapeHtml(s.sessionId) + '">' +
+            '<button class="s-edit btn-ghost" type="button" title="改名">✎</button>' +
             '<span class="s-title">' + (pinned ? '📌 ' : '') + escapeHtml(s.title) + '</span>' +
             '<span class="s-meta">¥' + s.yuanToday.toFixed(4) + ' · ' + t + '</span>' +
             '</div>'
           );
         })
         .join('');
-    } else {
+    } else if (!sess.length) {
       listEl.innerHTML = '<div class="note">今日暂无会话活动</div>';
     }
 
@@ -324,8 +325,43 @@
     drawCharts();
   });
 
-  /* ---------- 今日会话列表：点击钉选 / 跟随最新（委托，避免重渲染丢监听） ---------- */
+  /* ---------- 今日会话列表：点击钉选 / 每行 ✎ 就地改名 / 跟随最新 / 当前对话 ---------- */
+  let editingRowPath = null;
+  function startRowEdit(row) {
+    editingRowPath = row.dataset.path;
+    const current = (row.querySelector('.s-title') || {}).textContent || '';
+    row.innerHTML =
+      '<input type="text" class="s-input" maxlength="60" value="' + escapeHtml(current) + '">' +
+      '<button class="s-save btn-ghost" type="button">保存</button>' +
+      '<button class="s-cancel btn-ghost" type="button">取消</button>';
+    row.querySelector('.s-input').focus();
+  }
+  function saveRowEdit(row) {
+    const v = (row.querySelector('.s-input') || {}).value || '';
+    editingRowPath = null;
+    if (row.dataset.sid) vscode.postMessage({ type: 'setTitle', sessionId: row.dataset.sid, title: v.trim() });
+  }
+  function cancelRowEdit() {
+    editingRowPath = null;
+  }
   $('session-list').addEventListener('click', (e) => {
+    const btn = e.target.closest('button');
+    if (btn && btn.classList.contains('s-edit')) {
+      e.stopPropagation();
+      startRowEdit(btn.closest('.s-row'));
+      return;
+    }
+    if (btn && btn.classList.contains('s-save')) {
+      e.stopPropagation();
+      saveRowEdit(btn.closest('.s-row'));
+      return;
+    }
+    if (btn && btn.classList.contains('s-cancel')) {
+      e.stopPropagation();
+      cancelRowEdit();
+      return;
+    }
+    if (e.target.tagName === 'INPUT') return;
     const row = e.target.closest('.s-row');
     if (row && row.dataset.path) vscode.postMessage({ type: 'pinSession', path: row.dataset.path });
   });

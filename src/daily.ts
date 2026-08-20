@@ -2,6 +2,7 @@ import * as fs from 'fs';
 import * as path from 'path';
 import { homeDir } from './homedir';
 import { costYuan, loadPricing } from './pricing';
+import { extractUserText } from './usertext';
 
 interface FileSum {
   size: number;
@@ -9,6 +10,8 @@ interface FileSum {
   yuanToday: number;
   /** 最后一条用户消息的时间戳（"当前对话"定位信号） */
   lastUserMs: number;
+  /** 第一条真人消息自动提取的标题（列表自动命名） */
+  autoTitle: string | null;
 }
 
 export interface SessionTodayInfo {
@@ -17,6 +20,7 @@ export interface SessionTodayInfo {
   yuanToday: number;
   lastActivityMs: number;
   lastUserMs: number;
+  autoTitle: string | null;
 }
 
 /**
@@ -64,7 +68,13 @@ export class DailyTotals {
             continue;
           }
           const parsed = this.parseFile(p, todayKey);
-          this.cache.set(p, { size, mtimeMs, yuanToday: parsed.yuanToday, lastUserMs: parsed.lastUserMs });
+          this.cache.set(p, {
+            size,
+            mtimeMs,
+            yuanToday: parsed.yuanToday,
+            lastUserMs: parsed.lastUserMs,
+            autoTitle: parsed.autoTitle,
+          });
           total += parsed.yuanToday;
         }
       }
@@ -92,6 +102,7 @@ export class DailyTotals {
         yuanToday: v.yuanToday,
         lastActivityMs: v.mtimeMs,
         lastUserMs: v.lastUserMs,
+        autoTitle: v.autoTitle,
       });
     }
     out.sort((a, b) => b.lastActivityMs - a.lastActivityMs);
@@ -111,17 +122,18 @@ export class DailyTotals {
     return best;
   }
 
-  /** 单文件解析：今日费用和 + 最后一条用户消息时间戳（"当前对话"定位信号） */
-  private parseFile(p: string, todayKey: string): { yuanToday: number; lastUserMs: number } {
+  /** 单文件解析：今日费用和 + 最后一条用户消息时间戳 + 自动标题 */
+  private parseFile(p: string, todayKey: string): { yuanToday: number; lastUserMs: number; autoTitle: string | null } {
     let sum = 0;
     let lastUserMs = 0;
+    let autoTitle: string | null = null;
     try {
       const raw = fs.readFileSync(p, 'utf8');
       for (const line of raw.split('\n')) {
         if (!line.trim()) continue;
         let rec: {
           type?: string;
-          message?: { usage?: Record<string, number>; model?: string };
+          message?: { usage?: Record<string, number>; model?: string; content?: unknown };
           model?: string;
           timestamp?: string;
         };
@@ -135,6 +147,10 @@ export class DailyTotals {
         if (Number.isNaN(ts.getTime())) continue;
         if (rec.type === 'user') {
           if (ts.getTime() > lastUserMs) lastUserMs = ts.getTime();
+          if (!autoTitle && rec.message?.content != null) {
+            const text = extractUserText(rec.message.content);
+            if (text) autoTitle = text.slice(0, 60);
+          }
           continue;
         }
         if (rec.type !== 'assistant' || !rec.message?.usage) continue;
@@ -151,6 +167,6 @@ export class DailyTotals {
     } catch {
       /* 读取失败 → 0 */
     }
-    return { yuanToday: sum, lastUserMs };
+    return { yuanToday: sum, lastUserMs, autoTitle };
   }
 }
