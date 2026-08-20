@@ -1,0 +1,24 @@
+{
+  "peakHours": [
+    { "start": 9, "end": 12 },
+    { "start": 14, "end": 18 }
+  ],
+  "models": {
+    "deepseek-v4-pro": {
+      "hitOff": 0.15,
+      "hitPeak": 0.3,
+      "missOff": 4.5,
+      "missPeak": 9.0,
+      "outOff": 13.5,
+      "outPeak": 27.0
+    },
+    "deepseek-v4-flash": {
+      "hitOff": 0.05,
+      "hitPeak": 0.1,
+      "missOff": 1.5,
+      "missPeak": 3.0,
+      "outOff": 4.5,
+      "outPeak": 9.0
+    }
+  }
+}

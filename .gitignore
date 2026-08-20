@@ -1,0 +1,4 @@
+node_modules/
+dist/
+*.vsix
+settings-merge-snippet.generated.json

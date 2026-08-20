@@ -1,0 +1,74 @@
+{
+  "name": "cc-ds-monitor",
+  "displayName": "CC-DS Monitor：Claude Code × DeepSeek 用量监控",
+  "description": "在 VSCode 状态栏与仪表盘中实时显示 Claude Code(DeepSeek) 的缓存命中率、token 消耗与上下文过长预警",
+  "version": "1.0.0",
+  "publisher": "cc-ds-local",
+  "private": true,
+  "license": "MIT",
+  "engines": {
+    "vscode": "^1.85.0"
+  },
+  "categories": [
+    "Other"
+  ],
+  "activationEvents": [
+    "onStartupFinished"
+  ],
+  "main": "./dist/extension.js",
+  "contributes": {
+    "commands": [
+      {
+        "command": "ccDsMonitor.openDashboard",
+        "title": "cc-ds：打开用量仪表盘"
+      },
+      {
+        "command": "ccDsMonitor.refreshNow",
+        "title": "cc-ds：立即刷新数据"
+      }
+    ],
+    "configuration": {
+      "title": "CC-DS Monitor",
+      "properties": {
+        "ccDsMonitor.warnThreshold": {
+          "type": "number",
+          "default": 75,
+          "description": "上下文使用率黄色预警阈值（%）"
+        },
+        "ccDsMonitor.criticalThreshold": {
+          "type": "number",
+          "default": 85,
+          "description": "上下文使用率红色预警阈值（%）"
+        },
+        "ccDsMonitor.refreshMs": {
+          "type": "number",
+          "default": 1000,
+          "description": "状态栏刷新间隔（毫秒）"
+        },
+        "ccDsMonitor.stalenessMs": {
+          "type": "number",
+          "default": 30000,
+          "description": "桥接数据超过此时长视为陈旧，自动切换 JSONL 兜底（毫秒）"
+        },
+        "ccDsMonitor.enableBalanceCheck": {
+          "type": "boolean",
+          "default": false,
+          "description": "启用 DeepSeek 账户余额查询与可用天数预估（需要网络，每 5 分钟一次）"
+        }
+      }
+    }
+  },
+  "scripts": {
+    "build": "tsc -p .",
+    "watch": "tsc -w -p .",
+    "test": "node scripts/test-math.cjs && node scripts/test-bridge.cjs && node scripts/test-monitor.cjs && node scripts/test-daily.cjs && node scripts/test-titles.cjs && node scripts/test-balance.cjs",
+    "install:scripts": "node scripts/install-scripts.cjs",
+    "package": "vsce package --allow-missing-repository"
+  },
+  "devDependencies": {
+    "@types/node": "^22.0.0",
+    "@types/vscode": "^1.85.0",
+    "@vscode/vsce": "^3.0.0",
+    "typescript": "^5.5.0"
+  }
+}
