@@ -7,6 +7,8 @@ interface FileSum {
   size: number;
   mtimeMs: number;
   yuanToday: number;
+  /** 最后一条用户消息的时间戳（"当前对话"定位信号） */
+  lastUserMs: number;
 }
 
 export interface SessionTodayInfo {
@@ -14,6 +16,7 @@ export interface SessionTodayInfo {
   sessionId: string;
   yuanToday: number;
   lastActivityMs: number;
+  lastUserMs: number;
 }
 
 /**
@@ -60,9 +63,9 @@ export class DailyTotals {
             total += prev.yuanToday;
             continue;
           }
-          const yuanToday = this.sumToday(p, todayKey);
-          this.cache.set(p, { size, mtimeMs, yuanToday });
-          total += yuanToday;
+          const parsed = this.parseFile(p, todayKey);
+          this.cache.set(p, { size, mtimeMs, yuanToday: parsed.yuanToday, lastUserMs: parsed.lastUserMs });
+          total += parsed.yuanToday;
         }
       }
     } catch {
@@ -88,15 +91,30 @@ export class DailyTotals {
         sessionId: path.basename(p).replace(/\.jsonl$/, ''),
         yuanToday: v.yuanToday,
         lastActivityMs: v.mtimeMs,
+        lastUserMs: v.lastUserMs,
       });
     }
     out.sort((a, b) => b.lastActivityMs - a.lastActivityMs);
     return out;
   }
 
-  /** 单文件"今天"的费用和（逐消息按各自时间戳判定峰谷） */
-  private sumToday(p: string, todayKey: string): number {
+  /** "当前对话"：最后一条用户消息最新的会话（无界面 API 时的最佳代理信号） */
+  currentConversationPath(): string | null {
+    let best: string | null = null;
+    let bestMs = 0;
+    for (const [p, v] of this.cache) {
+      if (v.lastUserMs > bestMs) {
+        bestMs = v.lastUserMs;
+        best = p;
+      }
+    }
+    return best;
+  }
+
+  /** 单文件解析：今日费用和 + 最后一条用户消息时间戳（"当前对话"定位信号） */
+  private parseFile(p: string, todayKey: string): { yuanToday: number; lastUserMs: number } {
     let sum = 0;
+    let lastUserMs = 0;
     try {
       const raw = fs.readFileSync(p, 'utf8');
       for (const line of raw.split('\n')) {
@@ -112,10 +130,14 @@ export class DailyTotals {
         } catch {
           continue;
         }
-        if (rec?.type !== 'assistant' || !rec.message?.usage) continue;
-        if (!rec.timestamp) continue;
+        if (!rec?.timestamp) continue;
         const ts = new Date(rec.timestamp);
         if (Number.isNaN(ts.getTime())) continue;
+        if (rec.type === 'user') {
+          if (ts.getTime() > lastUserMs) lastUserMs = ts.getTime();
+          continue;
+        }
+        if (rec.type !== 'assistant' || !rec.message?.usage) continue;
         if (this.beijingDateKey(ts) !== todayKey) continue;
         const u = rec.message.usage;
         const cost = costYuan(
@@ -129,6 +151,6 @@ export class DailyTotals {
     } catch {
       /* 读取失败 → 0 */
     }
-    return sum;
+    return { yuanToday: sum, lastUserMs };
   }
 }

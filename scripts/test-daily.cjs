@@ -36,6 +36,9 @@ fs.mkdirSync(projA, { recursive: true });
 function line(model, usage, ts) {
   return JSON.stringify({ type: 'assistant', message: { model, usage }, timestamp: ts }) + '\n';
 }
+function userLine(text, ts) {
+  return JSON.stringify({ type: 'user', message: { content: [{ type: 'text', text }] }, timestamp: ts }) + '\n';
+}
 
 // 固定"现在"= 2026-08-20T04:00Z（北京 12:00，8月20日）
 const NOW = new Date('2026-08-20T04:00:00.000Z');
@@ -51,10 +54,11 @@ fs.writeFileSync(
   line('deepseek-v4-flash', today2, '2026-08-20T03:00:00.000Z') + // 北京 11:00 峰
   line('deepseek-v4-pro', yest, '2026-08-19T12:00:00.000Z') // 北京 08-19 20:00 → 不算今天
 );
-// 文件2：今天 1 条（谷时）
+// 文件2：今天 1 条（谷时）+ 最近一条用户消息（"当前对话"信号）
 fs.writeFileSync(
   path.join(projA, 's2.jsonl'),
-  line('deepseek-v4-pro', { input_tokens: 100, cache_read_input_tokens: 0, cache_creation_input_tokens: 0, output_tokens: 0 }, '2026-08-20T00:00:00.000Z') // 北京 08:00 谷
+  line('deepseek-v4-pro', { input_tokens: 100, cache_read_input_tokens: 0, cache_creation_input_tokens: 0, output_tokens: 0 }, '2026-08-20T00:00:00.000Z') + // 北京 08:00 谷
+    userLine('刚才在 s2 里发的话', '2026-08-20T04:01:00.000Z')
 );
 
 console.log('== 今日合计（北京时间日切 + 峰谷计价 + 跨文件求和）==');
@@ -83,6 +87,10 @@ ok('清单含 2 个会话', list.length === 2);
 ok('按最后活动倒序', list[0].lastActivityMs >= list[1].lastActivityMs);
 ok('清单会话 ID 从文件名提取', list.every((s) => s.path.endsWith(s.sessionId + '.jsonl')));
 assertClose('清单合计与 total 一致', list.reduce((a, s) => a + s.yuanToday, 0), daily.total);
+
+console.log('== "当前对话"定位（最后用户消息最新者）==');
+const currentPath = daily.currentConversationPath();
+ok('定位到 s2（其用户消息最新）', currentPath === path.join(projA, 's2.jsonl'), 'got ' + currentPath);
 
 console.log('== 日切（跨天后昨天的消息不再计入）==');
 const NOW2 = new Date('2026-08-21T04:00:00.000Z');

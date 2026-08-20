@@ -187,6 +187,9 @@ console.log('== 1d. 用户钉选会话 → 无视跟随逻辑一直监控；解�
   m.refreshNow();
   s = states[states.length - 1];
   ok('解除钉选后回到跟随最新', s.data && s.data.transcriptPath !== pA && s.pinnedPath === null);
+  m.pinCurrentConversation();
+  s = states[states.length - 1];
+  ok('「当前对话」钉选到用户消息最新的会话', s.pinnedPath != null && s.data && s.data.transcriptPath === s.pinnedPath);
   m.dispose();
   fs.rmSync(pA, { force: true });
   fs.rmSync(pB, { force: true });

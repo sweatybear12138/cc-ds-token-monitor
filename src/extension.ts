@@ -47,6 +47,9 @@ export function activate(context: vscode.ExtensionContext): void {
     (p: string | null) => {
       monitor.pinTranscript(p);
     },
+    () => {
+      monitor.pinCurrentConversation();
+    },
     () => settings.enableBalanceCheck,
     () => {
       const cur = settings.enableBalanceCheck;

@@ -329,6 +329,11 @@ h1 {
   color: var(--color-ink-2);
   white-space: nowrap;
 }
+.pin-actions {
+  display: flex;
+  gap: var(--space-sm);
+  flex-wrap: wrap;
+}
 
 /* ---------- 会话详情表 ---------- */
 .kv {

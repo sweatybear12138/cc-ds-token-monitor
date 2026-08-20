@@ -114,6 +114,14 @@ export class Monitor {
     this.refreshNow(false);
   }
 
+  /** "当前对话"：钉选最后一条用户消息最新的会话（屏幕上正在显示的对话的最佳代理） */
+  pinCurrentConversation(): void {
+    this.dailyRefresh();
+    const p = this.daily.currentConversationPath();
+    this.log(`钉选"当前对话": ${p ?? '(未找到)'}`);
+    if (p) this.pinTranscript(p);
+  }
+
   refreshNow(force = false): void {
     if (force && this.mode === 'jsonl') {
       this.log('手动强制刷新（丢弃会话选择，重选最新活跃者）');

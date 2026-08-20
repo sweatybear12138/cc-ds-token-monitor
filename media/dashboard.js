@@ -332,6 +332,9 @@
   $('b-unpin').addEventListener('click', () => {
     vscode.postMessage({ type: 'unpinSession' });
   });
+  $('b-pin-current').addEventListener('click', () => {
+    vscode.postMessage({ type: 'pinCurrent' });
+  });
 
   /* ---------- 会话标题自定义（改名/保存/取消，委托到表格容器，避免每次重渲染丢监听） ---------- */
   let editingTitle = false;

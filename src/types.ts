@@ -64,6 +64,7 @@ export interface SessionInfo {
   title: string;
   yuanToday: number;
   lastActivityMs: number;
+  lastUserMs: number;
 }
 
 export interface BalanceInfo {

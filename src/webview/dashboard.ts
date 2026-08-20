@@ -24,6 +24,7 @@ export class DashboardPanel implements vscode.Disposable {
     private readonly getThresholds: () => { warn: number; critical: number },
     private readonly onSetTitle: (sessionId: string, title: string) => void,
     private readonly onPin: (path: string | null) => void,
+    private readonly onPinCurrent: () => void,
     private readonly getBalanceEnabled: () => boolean,
     private readonly onToggleBalance: () => void
   ) {}
@@ -127,7 +128,10 @@ export class DashboardPanel implements vscode.Disposable {
     <div class="card">
       <div class="label">今日会话（点击切换监控）</div>
       <div id="session-list" class="session-list"></div>
-      <button id="b-unpin" class="btn-ghost" type="button">↺ 跟随最新</button>
+      <div class="pin-actions">
+        <button id="b-pin-current" class="btn-ghost" type="button">🎯 当前对话</button>
+        <button id="b-unpin" class="btn-ghost" type="button">↺ 跟随最新</button>
+      </div>
     </div>
     <div class="card">
       <div class="label">账户余额</div>
@@ -232,6 +236,10 @@ export class DashboardPanel implements vscode.Disposable {
       }
       case 'pinSession': {
         this.onPin(typeof msg.path === 'string' && msg.path ? msg.path : null);
+        break;
+      }
+      case 'pinCurrent': {
+        this.onPinCurrent();
         break;
       }
       case 'unpinSession': {
