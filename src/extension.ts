@@ -9,6 +9,8 @@ import { Settings } from './settings';
 import { StatusBar } from './statusBar';
 import { TitleStore } from './titles';
 import { DashboardPanel } from './webview/dashboard';
+import { HostOptions } from './webview/host';
+import { SidebarViewProvider } from './webview/sidebar';
 
 /**
  * cc-ds-monitor：Claude Code × DeepSeek 实时用量监控。
@@ -37,34 +39,38 @@ export function activate(context: vscode.ExtensionContext): void {
     }
   );
   let monitor: Monitor;
-  const dashboard = new DashboardPanel(
-    context,
-    thresholds,
-    (id: string, title: string) => {
+  // 两个仪表盘入口（独立页面 + 侧边栏视图）共享同一套宿主配置与回调
+  const hostOpts: HostOptions = {
+    mediaDir: path.join(context.extensionPath, 'media'),
+    getThresholds: thresholds,
+    onSetTitle: (id: string, title: string) => {
       titleStore.set(id, title);
       monitor.refreshNow(false); // 重新 emit，应用新标题
     },
-    (p: string | null) => {
+    onPin: (p: string | null) => {
       monitor.pinTranscript(p);
     },
-    () => {
+    onPinCurrent: () => {
       monitor.pinCurrentConversation();
     },
-    () => settings.enableBalanceCheck,
-    () => {
+    getBalanceEnabled: () => settings.enableBalanceCheck,
+    onToggleBalance: () => {
       const cur = settings.enableBalanceCheck;
       // update 是异步的：必须等写入完成后再查，否则 check() 读到的还是旧开关状态
       void vscode.workspace
         .getConfiguration('ccDsMonitor')
         .update('enableBalanceCheck', !cur, vscode.ConfigurationTarget.Global)
         .then(() => balance.check());
-    }
-  );
+    },
+  };
+  const dashboard = new DashboardPanel(context, hostOpts);
+  const sidebar = new SidebarViewProvider(hostOpts);
   monitor = new Monitor(runDir, settings.refreshMs, settings.stalenessMs, (state) => {
     try {
       statusBar.render(state);
       notifier.onState(state);
       dashboard.push(state);
+      sidebar.push(state);
     } catch (e) {
       console.error('[cc-ds] render 异常:', e);
     }
@@ -74,6 +80,7 @@ export function activate(context: vscode.ExtensionContext): void {
   context.subscriptions.push(
     statusBar,
     dashboard,
+    vscode.window.registerWebviewViewProvider('ccDsMonitor.dashboardView', sidebar),
     vscode.commands.registerCommand('ccDsMonitor.openDashboard', () => dashboard.show()),
     vscode.commands.registerCommand('ccDsMonitor.refreshNow', () => monitor.refreshNow(true)),
     settings.onChange(() => {

@@ -2,7 +2,7 @@
   "name": "cc-ds-monitor",
   "displayName": "CC-DS Monitor：Claude Code × DeepSeek 用量监控",
   "description": "在 VSCode 状态栏与仪表盘中实时显示 Claude Code(DeepSeek) 的缓存命中率、token 消耗与上下文过长预警",
-  "version": "1.1.0",
+  "version": "1.2.0",
   "publisher": "cc-ds-local",
   "private": true,
   "license": "MIT",
@@ -17,6 +17,24 @@
   ],
   "main": "./dist/extension.js",
   "contributes": {
+    "viewsContainers": {
+      "activitybar": [
+        {
+          "id": "ccDsMonitor",
+          "title": "CC-DS 用量监控",
+          "icon": "media/icon.png"
+        }
+      ]
+    },
+    "views": {
+      "ccDsMonitor": [
+        {
+          "type": "webview",
+          "id": "ccDsMonitor.dashboardView",
+          "name": "用量仪表盘"
+        }
+      ]
+    },
     "commands": [
       {
         "command": "ccDsMonitor.openDashboard",
